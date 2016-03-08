@@ -1,13 +1,12 @@
 #pragma once
 #include <stdlib.h>
-void c_delete(void ** ptr){
-    if (*ptr == NULL)
-        return;
-    free(*ptr);
-    ptr = NULL;
-}
-void * make_copy(const void * buffer,size_t buffsize){
-    void * newptr = malloc(buffsize);
-    memcpy(newptr,buffer,buffsize);
-    return newptr;
-}
+#include "cache.h"
+
+void c_delete(void ** ptr);
+void * make_copy(const void * buffer,size_t buffsize);
+
+struct val_item{
+    void * value;
+    uint32_t val_size;
+};
+typedef struct val_item val_s;

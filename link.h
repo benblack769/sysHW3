@@ -2,10 +2,7 @@
 #include <string.h>
 #include "cache.h"
 #include "helper.h"
-struct val_item{
-    void * value;
-    uint32_t val_size;
-};
+
 struct linkstruct{
     uint8_t * key;
     struct val_item val;
@@ -13,27 +10,28 @@ struct linkstruct{
 };
 typedef struct linkstruct link;
 void add_link(link ** list,key_t key,val_t val,uint32_t val_size){
-    while(*list != NULL)
-        list = &((*list)->next);
+    link * oldlink = *list;
     *list = calloc(1,sizeof(link));
     link * curlink = *list;
 
-    curlink->key = make_copy(key,strlen(key));
+    curlink->key = make_copy(key,strlen((char *)(key))+1);
     curlink->val.value = make_copy(val,val_size);
+    curlink->val.val_size = val_size;
+    curlink->next = oldlink;
 }
 void delete_link(link ** list){
     if(*list == NULL)
         return;
     link * curl = *list;
     link * newl = curl->next;
-    c_delete(&curl->key);
-    c_delete(&curl->val.value);
-    c_delete(curl);
+    free(curl->key);
+    free(curl->val.value);
+    free(curl);
     *list = newl;
 }
 link ** get_linkpp(link ** list,key_t key){
     while(*list != NULL){
-        if (strcmp((*list)->key,key))
+        if (strcmp((char*)(*list)->key,(char*)(key)) == 0)
             return list;
         list = &(*list)->next;
     }
