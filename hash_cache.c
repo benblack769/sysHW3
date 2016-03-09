@@ -3,11 +3,14 @@
 #include <stdbool.h>
 #include "cache.h"
 #include "helper.h"
+#include "replacement.h"
 
 struct key_val_obj{
     key_t key;
     val_t val;
     uint32_t val_size;
+    
+    p_info_t policy_info;
 };
 typedef struct key_val_obj key_val_s;
 struct link_obj;
@@ -16,7 +19,7 @@ struct link_obj{
     key_val_s data;
     link_t next;
 };
-void del_link(link_t * obj);
+void del_link(cache_t cache, link_t * obj);
 
 const uint32_t blank_marker = 0;//needs to be zero so that calloc initializes to blank
 const uint32_t filled_marker = 1;
@@ -48,9 +51,13 @@ struct cache_obj{
     size_t table_size;
     size_t slots_used;
     hash_func h_fn;
+    policy_t evic_policy;
 };
 const size_t default_table_size = 199;//medium size prime number
 
+struct user_identifier{//declared in replacement.h
+    link_t * linkpp;
+};
 
 cache_t create_cache(uint64_t maxmem,hash_func h_fn){
     cache_t n_cache = calloc(1,sizeof(struct cache_obj));
@@ -61,6 +68,7 @@ cache_t create_cache(uint64_t maxmem,hash_func h_fn){
     n_cache->slots_used = 0;
     n_cache->table = calloc(default_table_size,sizeof(key_val_s));
     n_cache->h_fn = (h_fn == NULL) ? def_hash_fn : h_fn;
+    n_cache->evic_policy = create_policy(maxmem);
     return n_cache;
 }
 
@@ -94,15 +102,35 @@ void resize_table(cache_t cache,uint64_t new_size){
     }
     free(old_table);
 }
+void delete_keys(cache_t cache,struct id_arr del_ids){
+    for(size_t di = 0;di < del_ids.size; di++){
+        cache_delete(cache,(key_t)(del_ids.data[di]));
+    }
+}
 
 void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
-    key_val_s new_item = {make_copy(key,strlen((char*)key)+1),make_copy(val,val_size),val_size};
+    struct id_arr add_res = ids_to_delete_if_added(cache->evic_policy,val_size);
+    if(!add_res.should_add){
+        return;
+    }
+    else{
+        delete_keys(cache,add_res);
+    }
+    
+    key_t key_copy = make_copy(key,strlen((char*)key)+1);
+    key_val_s new_item = {
+        key_copy,
+        make_copy(val,val_size),
+        val_size,
+        create_info(cache->evic_policy,(void*)(key_copy),val_size)};
+    
     assign_to_link(querry_hash(cache,key),new_item);
     cache->mem_used += val_size;
 }
 val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){
     link_t hash_l = *querry_hash(cache,key);
     if(hash_l != NULL){
+        info_gotten(cache->evic_policy,hash_l->data.policy_info);
         *val_size = hash_l->data.val_size;
         return hash_l->data.val;
     }
@@ -111,12 +139,13 @@ val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){
         return NULL;
     }
 }
-void del_link(link_t * obj){
+void del_link(cache_t cache,link_t * obj){
     link_t myobj = *obj;
     if(*obj != NULL){
         *obj = myobj->next;
         free((uint8_t*)myobj->data.key);
         free((void *)myobj->data.val);
+        delete_info(cache->evic_policy,myobj->data.policy_info);
         free(myobj);
     }
 }
@@ -124,7 +153,7 @@ void cache_delete(cache_t cache, key_t key){
     link_t * del_l = querry_hash(cache,key);
     if(*del_l != NULL){
         cache->mem_used -= (*del_l)->data.val_size;
-        del_link(del_l);
+        del_link(cache,del_l);
     }
 }
 uint64_t cache_space_used(cache_t cache){
@@ -133,9 +162,10 @@ uint64_t cache_space_used(cache_t cache){
 void destroy_cache(cache_t cache){
     for(size_t i = 0; i < cache->table_size; i++){
         while(cache->table[i] != NULL){
-            del_link(&cache->table[i]);
+            del_link(cache,&cache->table[i]);
         }
     }
+    delete_policy(cache->evic_policy);
     free(cache->table);
     free(cache);
 }

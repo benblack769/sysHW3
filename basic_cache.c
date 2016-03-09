@@ -2,7 +2,6 @@
 #include "cache.h"
 #include "link.h"
 
-/*
 struct cache_obj{
     uint64_t maxmem;
     uint64_t mem_used;
@@ -45,4 +44,4 @@ uint64_t cache_space_used(cache_t cache){
 void destroy_cache(cache_t cache){
     delete_list(&cache->LL);
     c_delete(&cache);
-}*/
+}

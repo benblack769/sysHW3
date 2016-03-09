@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include "cache.h"
 #include "helper.h"
+//#include "basic_cache.c"
+#include "hash_cache.c"
 
 #define num_vals (11ULL)
 
@@ -15,6 +17,7 @@ void generate_vals();
 void delete_vals();
 void test_cache_overflow(uint64_t max_mem);
 void test_no_eviction(uint64_t max_mem);
+void lru_test();
 
 int main(int argc,char ** argv){
     srand(23);
@@ -111,7 +114,6 @@ void test_cache_overflow(uint64_t max_mem){
             printf("cache uses more memory than specified\n");
         }
     }
-
     destroy_cache(cache);
 }
 
@@ -128,4 +130,33 @@ void delete_vals(){
     for(size_t v = 0; v < num_vals;v++){
         c_delete(&vals[v]);
     }
+}
+
+void lru_test(){
+    const size_t max_mem = 200;
+    policy_t policy = create_policy(max_mem);
+    const size_t num_elements = 1000;
+    size_t * markers = calloc(num_elements,sizeof(size_t));
+    p_info_t * infos = calloc(num_elements,sizeof(p_info_t));
+    //initialize markers
+    for(size_t i = 0; i < num_elements; i++){
+        markers[i] = i;
+    }
+    for(size_t i = 0; i < max_mem; i++){
+        infos[i] = create_info(policy,(user_id_t)(markers[i]),1);
+        struct id_arr res = ids_to_delete_if_added(policy,val_size);
+        if(!res.should_add || res.size > 0){
+            printf("LRU throws out something before max_mem is exceeded");
+        }       
+    }
+    for(size_t i = 0; i < max_mem/2; i++){
+        info_gotten(policy,infos[i]);
+    }
+    for(size_t j = max_mem; j < 2*max_mem; j++){
+        size_t i = j - max_mem;
+    }
+    
+    
+    
+    delete_policy(policy);
 }
