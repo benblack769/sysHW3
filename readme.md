@@ -7,6 +7,7 @@ lru_replacement.c | LRU code using the replacement.h interface
 helper.h | Some utility code definitions
 helper.c | The utility code
 test.c | The test code with the main function
+compile.sh | The compile script
 basic_cache.c | A kind of shitty and mostly non-functional cache implementation (currently commeted out)
 link.h | Helper header for basic_cache.c (not included by main project)
 
@@ -15,7 +16,7 @@ link.h | Helper header for basic_cache.c (not included by main project)
 
 ### Hash table
 
-Hash table uses chaining to resolve collisions. I seriously considered using open addressing with linear probing for its simplicity and speed, but I noticed that with a load factor of 0.5, I would be wasting huge amounts of memory, as each item in the table would be 32 bytes, and at worst, I would have 4 of these per actual item, which is 128 bytes of overhead, which is ridiculous. Deletes would also be complicated to do quickly, so I threw this idea out. Chaining does not have the memory overhead problem because  my table only holds pointers (so 8*4 + 8 = 40 bytes of overhead, which is acceptable).
+Hash table uses chaining to resolve collisions. I seriously considered using open addressing with linear probing for its simplicity and speed, but I noticed that while maintaining a maximum load factor of 0.5, I would be wasting huge amounts of memory, as each item in the table would be 32 bytes, and at worst, I would have 4 of these per actual item, which is 128 bytes of overhead, which is ridiculous. Deletes would also be complicated to do quickly, so I threw this idea out. Chaining does not have the memory overhead problem because  my table only holds pointers (so 8*4 + 8 = 40 bytes of overhead, which is acceptable).
 
 Maintains a load factor of 0.5 as values are added, which seems a good balance between memory usage and hash speed as the memory overhead is still relatively small, and assuming a good hash function, there shouldn't be many collisions (only a few percent) at 0.5 load.
 
@@ -57,3 +58,7 @@ The final test, cache_speed_test is by far the most thorough and useful, despite
 It also was a great way to check for memory leaks. After all, even minor memory leaks are fairly serious when running something millions of times.
 
 However, it is not such a great way to test for correctness of LRU and and the hash table, and I feel now that the tests I wrote to test for correctness are quite inadequate.
+
+#### Compiler warnings
+
+I removed all warnings on -Wextra and -Wall for all files except test.c, which I didn't really want to fix all the warnings, all of which I knew were actually fine.
