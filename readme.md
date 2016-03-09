@@ -4,6 +4,8 @@ cache.h | Assigned header file
 replacement.h | Eviction policy API
 hash_cache.c | Final cache implementation
 lru_replacement.c | LRU code using the replacement.h interface
+helper.h | Some utility code definitions
+helper.c | The utility code
 test.c | The test code with the main function
 basic_cache.c | A kind of shitty and mostly non-functional cache implementation (currently commeted out)
 link.h | Helper header for basic_cache.c (not included by main project)
@@ -11,10 +13,9 @@ link.h | Helper header for basic_cache.c (not included by main project)
 
 ## Design
 
-
 ### Hash table
 
-Hash table uses chaining to resolve collisions. I seriously considered using open addressing with linear probing for its simplicity and speed, but I noticed that with a load factor of 0.5, I would be wasting huge amounts of memory, as each item in the table would be 32 bytes, and at worst, I would have 4 of these per actual item, which is 128 bytes of overhead, which is ridiculous. Deletes would also be complicated to do quickly, so I threw this idea out. Chaining does not have the memory overhead problem because  my table only holds pointers (so 32 bytes of overhead, which is acceptable).
+Hash table uses chaining to resolve collisions. I seriously considered using open addressing with linear probing for its simplicity and speed, but I noticed that with a load factor of 0.5, I would be wasting huge amounts of memory, as each item in the table would be 32 bytes, and at worst, I would have 4 of these per actual item, which is 128 bytes of overhead, which is ridiculous. Deletes would also be complicated to do quickly, so I threw this idea out. Chaining does not have the memory overhead problem because  my table only holds pointers (so 8*4 + 8 = 40 bytes of overhead, which is acceptable).
 
 Maintains a load factor of 0.5 as values are added, which seems a good balance between memory usage and hash speed as the memory overhead is still relatively small, and assuming a good hash function, there shouldn't be many collisions (only a few percent) at 0.5 load.
 
@@ -22,13 +23,13 @@ Maintains a load factor of 0.5 as values are added, which seems a good balance b
 
 At first, I considered an interface which was completely abstracted from the cache, and held no information about the cache. While this would be very generalizable, I did not like the fact that I would have to create a duplicate hash table, so I instead made the interface in "replacement.h".
 
-This interface has an abstract data that the user inputs (user_id_t), that is associated with the policy information. The idea is that when the policy decides to delete a value, it returns markers that the cache understands, so that it can then delete the values. In my hash table cache, I used pointers to the keys I was storing in my cache.
+This interface has an abstract data that the user inputs (user_id_t), that the policy keeps track of in association with the policy data. The idea is that when the policy decides to delete a value, it returns markers that the cache understands, so that it can in turn delete the values. In my hash table cache, I used pointers to the keys I was storing in my cache. This is safe because I know that the string arrays never move, and the pointers given to the policy will never be dereferenced by the policy.
 
 On the cache side, the cache keeps track of a bit of abstract data that the policy returns, and interacts with the policy using this bit of data. In the LRU, this is a pointer to a link in the bidirectional linked list that forms the LRU.
 
-If I were to make FILO, I would have a simple queue, and p_info_t would be a pointer to the location of the queue of the item.
+If I were to make FILO, I would have a simple queue, and p_info_t would be a pointer to the location  of the item in the queue.
 
-I were to make Evict Largest, I would have p_info_t be a pointer to the location in the heap I use to keep track of the largest.
+I were to make Evict Largest, I would have p_info_t be a pointer to the location in the heap I use to keep track of the largest item.
 
 It was abstract enough that I could directly test LRU without dealing with any cache at all (using markers of integers, rather than string pointers).
 
@@ -36,7 +37,7 @@ It was abstract enough that I could directly test LRU without dealing with any c
 
 #### Serious memory leaks
 
-After running the tests and all functions return, and all values are deleted, there is still over 100MB of memory taken up on my system. I have not been able to track this down.
+After running the tests and all functions return, and all values are deleted, there is still over 100MB of memory taken up on my system. I fixed several memory lead issues, but I have only been able to reduce the problem, not eliminate it.
 
 #### Constant time performance
 

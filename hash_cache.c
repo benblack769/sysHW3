@@ -104,7 +104,7 @@ bool take_care_of_eviction_deletions(cache_t cache,uint32_t val_size){
 
 void cache_set(cache_t cache, key_type key, val_type val, uint32_t val_size){
     link_t * init_link = querry_hash(cache,key);
-    //if the item is in the list, then delete it
+    //if the item is already in the list, then delete it
     if(*init_link != NULL){
         del_link(cache,init_link);
     }
