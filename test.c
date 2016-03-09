@@ -32,7 +32,10 @@ int main(int argc,char ** argv){
     for(size_t t = 0; t < num_tests; t++){
         test_cache_overflow(test_sizes[t]);
     }
-    lru_test();
+    for(size_t t = 0; t < num_tests-1; t++){
+        lru_test(test_sizes[t]);//system memory exceded at highest max_mem due to nature of test
+        printf("test finished\n");
+    }
     
     delete_vals();
     return 0;
@@ -135,17 +138,16 @@ void delete_vals(){
     }
 }
 
-void lru_test(){
-    printf("LRU test start\n");
-    const size_t max_mem = 200;
+void lru_test(size_t max_mem){
     policy_t policy = create_policy(max_mem);
-    const size_t num_elements = 1000;
+    const size_t num_elements = max_mem*3;
     size_t * markers = calloc(num_elements,sizeof(size_t));
     p_info_t * infos = calloc(num_elements,sizeof(p_info_t));
     //initialize markers
     for(size_t i = 0; i < num_elements; i++){
         markers[i] = i;
     }
+   // printf("init\n")
     const uint32_t add_size = 1;//needs to be 1
     for(size_t i = 0; i < max_mem; i++){
         struct id_arr res = ids_to_delete_if_added(policy,add_size);
@@ -167,23 +169,32 @@ void lru_test(){
     if(res.size != max_mem/2){
         printf("LRU wants delete more or less than the correct number of values from the policy\n");
     }
-    //checks to see if all elements are indeed the least recently used
-    for(size_t j = max_mem/2; j < max_mem; j++){
-        bool is_in = false;
-        for(size_t i = 0; i < max_mem/2;i++){
-            is_in = is_in || (res.data[i] == j);
-        }
-        if(!is_in){
+    //checks to see if all elements are indeed the least recently used (in this case, the elements with markers max_mem/2 to max_mem)
+    bool * slots = calloc(max_mem/2,sizeof(bool));//initializes all to false
+    for(size_t i = 0; i < max_mem/2; i++){
+        size_t cur_marker = (size_t)(res.data[i]);
+        if(cur_marker >= max_mem || cur_marker < max_mem/2){
             printf("LRU is not an LRU\n");
         }
-        delete_info(policy,infos[j]);
+        else{
+            slots[cur_marker - max_mem/2] = true;
+            delete_info(policy,infos[cur_marker]);
+        }
     }
-    const size_t bigmarker = 123123;
+    for(size_t i = 0; i < max_mem/2; i++){
+        if(!slots[i]){
+            printf("LRU is not an LRU\n");           
+        }
+    }
+    const size_t bigmarker = 123123123123ULL;
     p_info_t biginfo = create_info(policy,(user_id_t)(bigmarker),add_size*max_mem/2);
     
+    //checks if zero is the next thing to be deleted (as it was the last thing access which was not deleted above)
+    struct id_arr fin_res = ids_to_delete_if_added(policy,add_size);
+    if(fin_res.size != 1 || fin_res.data[0] != 0){
+        printf("LRU is not an LRU\n");
+    }
     
-    
-    printf("LRU test end\n");
     delete_policy(policy);
     free(markers);
     free(infos);
