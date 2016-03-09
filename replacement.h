@@ -20,7 +20,7 @@ struct id_arr{
     bool should_add;
 };
 //adds the info to the policy (if "id" is already in there, then it duplicates the value)
-//the policy owns the pointer, do not free!!!
+//the policy owns the pointer, do not free!!! (use delete_info)
 //user owns the id pointer
 p_info_t create_info(policy_t policy,user_id_t id, uint32_t val_size);
 //removes info from the policy

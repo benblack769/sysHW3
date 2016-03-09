@@ -21,10 +21,6 @@ struct link_obj{
 };
 void del_link(cache_t cache, link_t * obj);
 
-const uint32_t blank_marker = 0;//needs to be zero so that calloc initializes to blank
-const uint32_t filled_marker = 1;
-const uint32_t del_marker = -1;
-
 uint64_t def_hash_fn(key_t key){
     //xors the bits of the string together
     size_t tot_size = strlen((char*)(key));
@@ -102,21 +98,31 @@ void resize_table(cache_t cache,uint64_t new_size){
     }
     free(old_table);
 }
-void delete_keys(cache_t cache,struct id_arr del_ids){
-    for(size_t di = 0;di < del_ids.size; di++){
-        cache_delete(cache,(key_t)(del_ids.data[di]));
+bool take_care_of_eviction_deletions(cache_t cache,uint32_t val_size){
+    struct id_arr add_res = ids_to_delete_if_added(cache->evic_policy,val_size);
+    bool ret_val = false;
+    if(add_res.should_add){
+        for(size_t di = 0;di < add_res.size; di++){
+            cache_delete(cache,(key_t)(add_res.data[di]));
+        }
+        if(add_res.data != NULL){
+            free(add_res.data);
+        }
+        ret_val = true;
     }
+    return ret_val;
 }
 
 void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
-    struct id_arr add_res = ids_to_delete_if_added(cache->evic_policy,val_size);
-    if(!add_res.should_add){
+    link_t * key_link = querry_hash(cache,key);
+    //if the item is in the list, then delete it
+    if(*key_link != NULL){
+        del_link(cache,key_link);
+    }
+    //if the policy tell the cache not to add the item, do not add it
+    if(!take_care_of_eviction_deletions(cache,val_size)){
         return;
     }
-    else{
-        delete_keys(cache,add_res);
-    }
-    
     key_t key_copy = make_copy(key,strlen((char*)key)+1);
     key_val_s new_item = {
         key_copy,
@@ -124,7 +130,7 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
         val_size,
         create_info(cache->evic_policy,(void*)(key_copy),val_size)};
     
-    assign_to_link(querry_hash(cache,key),new_item);
+    assign_to_link(key_link,new_item);
     cache->mem_used += val_size;
 }
 val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){

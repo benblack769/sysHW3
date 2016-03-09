@@ -4,15 +4,15 @@
 struct policy_obj{
     uint64_t maxmem;
     uint64_t used_mem;
-    //a bidirectional linked list with the most recently used at it's head, least recently used at it's tail
+    //a bidirectional linked list with the most recently used at top, least recently used at bottom
     p_info_t top;
     p_info_t bottom;
 };
 
 struct pinfo_obj{
     //the object of
-    p_info_t prev;
-    p_info_t next;
+    p_info_t low;
+    p_info_t high;
     user_id_t ident;
     uint32_t val_size;
 };
@@ -31,7 +31,7 @@ policy_t create_policy(uint64_t maxmem){
 void delete_policy(policy_t policy){
     p_info_t obj = policy->bottom;
     while(obj != NULL){
-        p_info_t next = obj->next;
+        p_info_t next = obj->high;
         free(obj);
         obj = next;
     }
@@ -39,9 +39,11 @@ void delete_policy(policy_t policy){
 }
 void move_info_to_head(policy_t policy,p_info_t info){
     p_info_t old_head = policy->top;
+    if(old_head != NULL)
+        old_head->high = info;
     
-    info->prev = old_head;
-    info->next = NULL;
+    info->low = old_head;
+    info->high = NULL;
     
     policy->top = info;
     if(policy->bottom == NULL){
@@ -49,23 +51,23 @@ void move_info_to_head(policy_t policy,p_info_t info){
     }
 }
 void remove_info_from_list(policy_t policy,p_info_t info){
-    if(info->next != NULL){
-        info->next->prev = info->prev;
+    if(info->high != NULL){
+        info->high->low = info->low;
     }
-    if(info->prev != NULL){
-        info->prev->next = info->next;
+    if(info->low != NULL){
+        info->low->high = info->high;
     }
     //alters policy if you are deleting the head or the tail
     if(policy->top == info){
-        policy->top = info->prev;
+        policy->top = info->low;
     }
     if(policy->bottom == info){
-        policy->bottom = info->next;
+        policy->bottom = info->high;
     }
 }
 
 p_info_t create_info(policy_t policy, user_id_t id, uint32_t val_size){
-    assert(policy->maxmem > policy->used_mem + val_size && "policy is asked to hold more memory than it should");
+    assert(!(policy->maxmem < policy->used_mem + val_size) && "policy is asked to hold more memory than it should");
 
     //create new object
     p_info_t newinf = calloc(1,sizeof(pinfo_s));
@@ -92,10 +94,10 @@ struct id_arr ids_to_delete_if_added(policy_t policy, uint32_t val_size){
     size_t num_del_ids = 0;
     while(tot_mem > policy->maxmem && cur_t != NULL){
         tot_mem -= cur_t->val_size;
-        cur_t = cur_t->next;
+        cur_t = cur_t->high;
         num_del_ids++;
     }
-    if(!(policy->bottom == NULL && val_size < policy->maxmem) 
+    if(!(policy->bottom == NULL && val_size < policy->maxmem)
             && cur_t == NULL){
         struct id_arr retval = {0,NULL,false};
         return retval;
@@ -103,11 +105,11 @@ struct id_arr ids_to_delete_if_added(policy_t policy, uint32_t val_size){
     user_id_t * arr = calloc(num_del_ids,sizeof(user_id_t));
     cur_t = policy->bottom;
     for(size_t di = 0; di < num_del_ids; di++){
-        arr[di] = cur_t;
-        cur_t = cur_t->next;
+        arr[di] = cur_t->ident;
+        cur_t = cur_t->high;
     }
     struct id_arr retval = {arr,num_del_ids,true};
-    return retval;
+    return retval;//caller frees arr
 }
 
 void info_gotten(policy_t policy,p_info_t info){

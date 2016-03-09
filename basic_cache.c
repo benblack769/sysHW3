@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include "cache.h"
 #include "link.h"
-
+/*
 struct cache_obj{
     uint64_t maxmem;
     uint64_t mem_used;
     link * LL;
 };
-cache_t create_cache(uint64_t maxmem){
+cache_t create_cache(uint64_t maxmem,hash_func h_fn){
     cache_t n_cache = calloc(1,sizeof(struct cache_obj));
 
     n_cache->maxmem = maxmem;
@@ -45,3 +45,4 @@ void destroy_cache(cache_t cache){
     delete_list(&cache->LL);
     c_delete(&cache);
 }
+*/

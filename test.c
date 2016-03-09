@@ -4,8 +4,9 @@
 #include <inttypes.h>
 #include "cache.h"
 #include "helper.h"
+#include "replacement.h"
 //#include "basic_cache.c"
-#include "hash_cache.c"
+//#include "hash_cache.c"
 
 #define num_vals (11ULL)
 
@@ -31,6 +32,8 @@ int main(int argc,char ** argv){
     for(size_t t = 0; t < num_tests; t++){
         test_cache_overflow(test_sizes[t]);
     }
+    lru_test();
+    
     delete_vals();
     return 0;
 }
@@ -133,6 +136,7 @@ void delete_vals(){
 }
 
 void lru_test(){
+    printf("LRU test start\n");
     const size_t max_mem = 200;
     policy_t policy = create_policy(max_mem);
     const size_t num_elements = 1000;
@@ -142,21 +146,45 @@ void lru_test(){
     for(size_t i = 0; i < num_elements; i++){
         markers[i] = i;
     }
+    const uint32_t add_size = 1;//needs to be 1
     for(size_t i = 0; i < max_mem; i++){
-        infos[i] = create_info(policy,(user_id_t)(markers[i]),1);
-        struct id_arr res = ids_to_delete_if_added(policy,val_size);
-        if(!res.should_add || res.size > 0){
-            printf("LRU throws out something before max_mem is exceeded");
+        struct id_arr res = ids_to_delete_if_added(policy,add_size);
+        if(!res.should_add){
+            printf("LRU wants to not add reasonable value\n");
+        }
+        if(res.size > 0){
+            printf("LRU throws out something before max_mem is exceeded\n");
         }       
+        infos[i] = create_info(policy,(user_id_t)(markers[i]),add_size);
     }
     for(size_t i = 0; i < max_mem/2; i++){
         info_gotten(policy,infos[i]);
     }
-    for(size_t j = max_mem; j < 2*max_mem; j++){
-        size_t i = j - max_mem;
+    struct id_arr res = ids_to_delete_if_added(policy,add_size*max_mem/2);
+    if(!res.should_add){
+        printf("LRU doesn't want to add a reasonable value\n");
     }
+    if(res.size != max_mem/2){
+        printf("LRU wants delete more or less than the correct number of values from the policy\n");
+    }
+    //checks to see if all elements are indeed the least recently used
+    for(size_t j = max_mem/2; j < max_mem; j++){
+        bool is_in = false;
+        for(size_t i = 0; i < max_mem/2;i++){
+            is_in = is_in || (res.data[i] == j);
+        }
+        if(!is_in){
+            printf("LRU is not an LRU\n");
+        }
+        delete_info(policy,infos[j]);
+    }
+    const size_t bigmarker = 123123;
+    p_info_t biginfo = create_info(policy,(user_id_t)(bigmarker),add_size*max_mem/2);
     
     
     
+    printf("LRU test end\n");
     delete_policy(policy);
+    free(markers);
+    free(infos);
 }
