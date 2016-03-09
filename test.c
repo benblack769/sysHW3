@@ -40,9 +40,11 @@ int main(int argc,char ** argv){
     for(size_t t = 0; t < num_tests-1; t++){
         cache_speed_test(test_sizes[t],test_sizes[t+1],NULL);
         cache_speed_test(test_sizes[t],test_sizes[t+1],custom_hash);
+        printf("arg\n");
     }
     
     delete_vals();
+    getchar();
     return 0;
 }
 uint64_t custom_hash(key_t key){
@@ -245,7 +247,7 @@ void cache_speed_test(size_t num_elmnts,size_t num_iters,hash_func hash_fn){
     key_t * key_arr = calloc(num_elmnts,sizeof(key_t));
     init_keys_to_rand_strs(key_arr,num_elmnts);
     
-    uint64_t int_value = 0xcccccccccccccccc;//intended to overflow
+    uint64_t int_value = 0xcccccccccccccccc;
     val_t my_val = (val_t)(&int_value);
     
     cache_t cache = create_cache(maxmem,hash_fn);
@@ -266,6 +268,7 @@ void cache_speed_test(size_t num_elmnts,size_t num_iters,hash_func hash_fn){
             num_in--;
         }
     }
+    destroy_cache(cache);
     free_keys((uint8_t**)(key_arr),num_elmnts);
     free(key_arr);
 }

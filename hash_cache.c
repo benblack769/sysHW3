@@ -114,10 +114,10 @@ bool take_care_of_eviction_deletions(cache_t cache,uint32_t val_size){
 }
 
 void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
-    link_t * key_link = querry_hash(cache,key);
+    link_t * init_link = querry_hash(cache,key);
     //if the item is in the list, then delete it
-    if(*key_link != NULL){
-        del_link(cache,key_link);
+    if(*init_link != NULL){
+        del_link(cache,init_link);
     }
     //if the policy tell the cache not to add the item, do not add it
     if(!take_care_of_eviction_deletions(cache,val_size)){
@@ -131,12 +131,13 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
         val_size,
         create_info(cache->evic_policy,(void*)(key_copy),val_size)};
     
-    assign_to_link(key_link,new_item);
+    assign_to_link(querry_hash(cache,key),new_item);
     cache->mem_used += val_size;
     cache->num_elements++;
     
     if(cache->num_elements > cache->table_size){
         resize_table(cache,cache->table_size*2);
+        printf("resize\n");
     }
 }
 val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){
@@ -155,19 +156,20 @@ void del_link(cache_t cache,link_t * obj){
     link_t myobj = *obj;
     if(*obj != NULL){
         *obj = myobj->next;
+        
+        cache->mem_used -= myobj->data.val_size;
+        cache->num_elements--;
+        
         free((uint8_t*)myobj->data.key);
         free((void *)myobj->data.val);
+        
         delete_info(cache->evic_policy,myobj->data.policy_info);
+        
         free(myobj);
     }
 }
 void cache_delete(cache_t cache, key_t key){
-    link_t * del_l = querry_hash(cache,key);
-    if(*del_l != NULL){
-        cache->mem_used -= (*del_l)->data.val_size;
-        cache->num_elements--;
-        del_link(cache,del_l);
-    }
+    del_link(cache,querry_hash(cache,key));
 }
 uint64_t cache_space_used(cache_t cache){
     return cache->mem_used;
