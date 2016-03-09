@@ -18,13 +18,15 @@ void generate_vals();
 void delete_vals();
 void test_cache_overflow(uint64_t max_mem);
 void test_no_eviction(uint64_t max_mem);
-void lru_test();
+void lru_test(size_t max_mem);
+void cache_speed_test(size_t num_elmnts, size_t num_iters, hash_func hash_fn);
+uint64_t custom_hash(key_t key);
 
 int main(int argc,char ** argv){
     srand(23);
     generate_vals();
     const size_t num_tests = 5;
-    uint64_t test_sizes[] = {10ULL,1000ULL,100000ULL,1000000ULL,100000000ULL};
+    uint64_t test_sizes[] = {10ULL,1000ULL,100000ULL,1000000ULL,10000000ULL};
 
     for(size_t t = 0; t < num_tests; t++){
         test_no_eviction(test_sizes[t]);
@@ -33,13 +35,30 @@ int main(int argc,char ** argv){
         test_cache_overflow(test_sizes[t]);
     }
     for(size_t t = 0; t < num_tests-1; t++){
-        lru_test(test_sizes[t]);//system memory exceded at highest max_mem due to nature of test
-        printf("test finished\n");
+        lru_test(test_sizes[t]);
+    }
+    for(size_t t = 0; t < num_tests-1; t++){
+        cache_speed_test(test_sizes[t],test_sizes[t+1],NULL);
+        cache_speed_test(test_sizes[t],test_sizes[t+1],custom_hash);
     }
     
     delete_vals();
     return 0;
 }
+uint64_t custom_hash(key_t key){
+    //xors the bits of the string together
+    size_t tot_size = strlen((char*)(key));
+    const size_t out_size = sizeof(uint64_t);
+    uint64_t out = 0;
+    for(size_t i = 0; i < tot_size / out_size;i++){
+        out += ((uint64_t *)(key))[i];
+    }
+    for(size_t i = 0;i < tot_size % out_size; i++){
+        out += ((uint64_t)(key[i + tot_size/out_size])) << i;
+    }
+    return out;
+}
+
 void test_no_eviction(uint64_t max_mem){
     cache_t cache = create_cache(max_mem,NULL);
     //should not evict things before memory exceeded test
@@ -198,4 +217,55 @@ void lru_test(size_t max_mem){
     delete_policy(policy);
     free(markers);
     free(infos);
+}
+uint64_t Rand(){
+    return rand();
+}
+uint64_t long_rand(){
+    return Rand() ^ (Rand() << 8) ^ (Rand() << 16) ^ (Rand() << 24) ^ (Rand() << 32);
+}
+
+void init_keys_to_rand_strs(key_t * keyarr,size_t num_keys){
+    for(size_t i = 0; i < num_keys; i++){
+        uint64_t null_term_8_byte_str = long_rand() & 0x00ffffffffffffff; 
+        keyarr[i] = calloc(1,sizeof(uint64_t));
+        *((uint64_t*)(keyarr[i])) = null_term_8_byte_str;
+    }
+}
+void free_keys(uint8_t ** keyarr,size_t num_keys){
+    for(size_t i = 0; i < num_keys; i++){
+        free(keyarr[i]);
+    }
+}
+
+void cache_speed_test(size_t num_elmnts,size_t num_iters,hash_func hash_fn){
+    const uint32_t val_size = sizeof(size_t);
+    size_t maxmem = (num_elmnts * val_size) / 2;
+    
+    key_t * key_arr = calloc(num_elmnts,sizeof(key_t));
+    init_keys_to_rand_strs(key_arr,num_elmnts);
+    
+    uint64_t int_value = 0xcccccccccccccccc;//intended to overflow
+    val_t my_val = (val_t)(&int_value);
+    
+    cache_t cache = create_cache(maxmem,hash_fn);
+    
+    size_t num_in = 0;
+    for(size_t i = 0; i < num_iters; i++){
+        size_t ci = i % num_elmnts;
+        if(Rand()%10 < 7){
+            uint32_t empty = -1;
+            cache_get(cache,key_arr[ci],&empty);
+        }
+        else if(num_in < long_rand() % num_elmnts){
+            cache_set(cache,key_arr[ci],my_val,val_size);
+            num_in++;
+        }
+        else{
+            cache_delete(cache,key_arr[ci]);
+            num_in--;
+        }
+    }
+    free_keys((uint8_t**)(key_arr),num_elmnts);
+    free(key_arr);
 }

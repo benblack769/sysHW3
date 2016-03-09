@@ -45,7 +45,7 @@ struct cache_obj{
     uint64_t mem_used;
     link_t * table;
     size_t table_size;
-    size_t slots_used;
+    size_t num_elements;
     hash_func h_fn;
     policy_t evic_policy;
 };
@@ -61,7 +61,7 @@ cache_t create_cache(uint64_t maxmem,hash_func h_fn){
     n_cache->maxmem = maxmem;
     n_cache->mem_used = 0;
     n_cache->table_size = default_table_size;
-    n_cache->slots_used = 0;
+    n_cache->num_elements = 0;
     n_cache->table = calloc(default_table_size,sizeof(key_val_s));
     n_cache->h_fn = (h_fn == NULL) ? def_hash_fn : h_fn;
     n_cache->evic_policy = create_policy(maxmem);
@@ -123,6 +123,7 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
     if(!take_care_of_eviction_deletions(cache,val_size)){
         return;
     }
+    
     key_t key_copy = make_copy(key,strlen((char*)key)+1);
     key_val_s new_item = {
         key_copy,
@@ -132,6 +133,11 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
     
     assign_to_link(key_link,new_item);
     cache->mem_used += val_size;
+    cache->num_elements++;
+    
+    if(cache->num_elements > cache->table_size){
+        resize_table(cache,cache->table_size*2);
+    }
 }
 val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){
     link_t hash_l = *querry_hash(cache,key);
@@ -159,6 +165,7 @@ void cache_delete(cache_t cache, key_t key){
     link_t * del_l = querry_hash(cache,key);
     if(*del_l != NULL){
         cache->mem_used -= (*del_l)->data.val_size;
+        cache->num_elements--;
         del_link(cache,del_l);
     }
 }

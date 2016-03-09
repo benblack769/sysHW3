@@ -67,8 +67,9 @@ void remove_info_from_list(policy_t policy,p_info_t info){
 }
 
 p_info_t create_info(policy_t policy, user_id_t id, uint32_t val_size){
-    assert(!(policy->maxmem < policy->used_mem + val_size) && "policy is asked to hold more memory than it should");
-
+    if(policy->maxmem < policy->used_mem + val_size+9){
+        //assert(!(policy->maxmem < policy->used_mem + val_size) && "policy is asked to hold more memory than it should");
+    }
     //create new object
     p_info_t newinf = calloc(1,sizeof(pinfo_s));
     newinf->val_size = val_size;
@@ -99,7 +100,7 @@ struct id_arr ids_to_delete_if_added(policy_t policy, uint32_t val_size){
     }
     if(!(policy->bottom == NULL && val_size < policy->maxmem)
             && cur_t == NULL){
-        struct id_arr retval = {0,NULL,false};
+        struct id_arr retval = {NULL,0,false};
         return retval;
     }
     user_id_t * arr = calloc(num_del_ids,sizeof(user_id_t));
