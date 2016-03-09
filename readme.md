@@ -1,15 +1,15 @@
-File|contents
---|--
-cache.h | Assigned header file
-replacement.h | Eviction policy API
-hash_cache.c | Final cache implementation
-lru_replacement.c | LRU code using the replacement.h interface
-helper.h | Some utility code definitions
-helper.c | The utility code
-test.c | The test code with the main function
-compile.sh | The compile script
-basic_cache.c | A kind of shitty and mostly non-functional cache implementation (currently commeted out)
-link.h | Helper header for basic_cache.c (not included by main project)
+### Files
+
+* cache.h: Assigned header file
+* replacement.h: Eviction policy API
+* hash_cache.c: Final cache implementation
+* lru_replacement.c: LRU code using the replacement.h interface
+* helper.h: Some utility code definitions
+* helper.c:  The utility code
+* test.c: The test code with the main function
+* compile.sh: The compile script
+* basic_cache.c: A kind of shitty and mostly non-functional cache implementation (currently commeted out)
+* link.h: Helper header for basic_cache.c (not included by main project)
 
 
 ## Design
