@@ -9,7 +9,7 @@ struct key_val_obj{
     key_type key;
     val_type val;
     uint32_t val_size;
-    
+
     p_info_t policy_info;
 };
 typedef struct key_val_obj key_val_s;
@@ -21,22 +21,9 @@ struct link_obj{
 };
 void del_link(cache_t cache, link_t * obj);
 
-uint64_t def_hash_fn(key_type key){
-    //xors the bits of the string together
-    size_t tot_size = strlen((char*)(key));
-    const size_t out_size = sizeof(uint64_t);
-    uint64_t out = 0;
-    for(size_t i = 0; i < tot_size / out_size;i++){
-        out ^= ((uint64_t *)(key))[i];
-    }
-    for(size_t i = 0;i < tot_size % out_size; i++){
-        out ^= ((uint64_t)(key[i + tot_size/out_size])) << i;
-    }
-    return out;
-}
+uint64_t def_hash_fn(key_type key);
 
-size_t hash_location(uint64_t hash_val,size_t table_size){
-    //consider converting to multiplicative function
+size_t map_to_location(uint64_t hash_val,size_t table_size){
     return hash_val % table_size;
 }
 
@@ -49,7 +36,7 @@ struct cache_obj{
     hash_func h_fn;
     policy_t evic_policy;
 };
-const size_t default_table_size = 199;//medium size prime number
+const size_t default_table_size = 2503;//medium size prime number
 
 struct user_identifier{//declared in replacement.h
     link_t * linkpp;
@@ -69,7 +56,9 @@ cache_t create_cache(uint64_t maxmem,hash_func h_fn){
 }
 
 link_t * querry_hash(cache_t cache, key_type key){
-    size_t hash_loc = hash_location(cache->h_fn(key),cache->table_size);
+    //returns the pointer to the pointer of the key, if the key exists,
+    // and the pointer to the location the key would be, if it were added, if it is not there
+    size_t hash_loc = map_to_location(cache->h_fn(key),cache->table_size);
     link_t * cur_item = &cache->table[hash_loc];
     while(*cur_item != NULL && strcmp((char*)(key),(char*)((*cur_item)->data.key))){
         cur_item = &(*cur_item)->next;
@@ -123,19 +112,19 @@ void cache_set(cache_t cache, key_type key, val_type val, uint32_t val_size){
     if(!take_care_of_eviction_deletions(cache,val_size)){
         return;
     }
-    
+
     key_type key_copy = make_copy(key,strlen((char*)key)+1);
     key_val_s new_item = {
         key_copy,
         make_copy(val,val_size),
         val_size,
         create_info(cache->evic_policy,(void*)(key_copy),val_size)};
-    
+
     assign_to_link(querry_hash(cache,key),new_item);
     cache->mem_used += val_size;
     cache->num_elements++;
-    
-    if(cache->num_elements > cache->table_size){
+
+    if(cache->num_elements*2 > cache->table_size){
         resize_table(cache,cache->table_size*2);
     }
 }
@@ -155,15 +144,15 @@ void del_link(cache_t cache,link_t * obj){
     link_t myobj = *obj;
     if(*obj != NULL){
         *obj = myobj->next;
-        
+
         cache->mem_used -= myobj->data.val_size;
         cache->num_elements--;
-        
+
         free((uint8_t*)myobj->data.key);
         free((void *)myobj->data.val);
-        
+
         delete_info(cache->evic_policy,myobj->data.policy_info);
-        
+
         free(myobj);
     }
 }
@@ -182,4 +171,19 @@ void destroy_cache(cache_t cache){
     delete_policy(cache->evic_policy);
     free(cache->table);
     free(cache);
+}
+
+uint64_t def_hash_fn(key_type key){
+    //xors the bits of the string together
+    size_t tot_size = strlen((char*)(key));
+    const size_t out_size = sizeof(uint64_t);
+    uint64_t out = 0;
+    for(size_t i = 0; i < tot_size / out_size;i++){
+        out ^= ((uint64_t *)(key))[i];
+    }
+    for(size_t i = 0;i < tot_size%out_size; i++){
+        size_t index = i + tot_size - tot_size%out_size;
+        out ^= ((uint64_t)(key[index])) << (i*BITS_IN_BYTE);
+    }
+    return out;
 }

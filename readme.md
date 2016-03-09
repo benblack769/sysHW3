@@ -3,16 +3,26 @@ File|contents
 cache.h | Assigned header file
 replacement.h | Eviction policy API
 hash_cache.c | Final cache implementation
-replacement.h | 
-replacement.h |
-replacement.h |
-replacement.h |
+lru_replacement.c | LRU code using the replacement.h interface
+test.c | The test code with the main function
+basic_cache.c | A kind of shitty and mostly non-functional cache implementation (currently commeted out)
+link.h | Helper header for basic_cache.c (not included by main project)
 
 
-### Success and status
+## Success and status
 
 Serious memory leaks.
-Kind of bad performance: 10,000,000 sets, deletes and gets on a working set of 500,000 elements takes over a minute. While this is less than quadratic
+
+Constant time performance:
+
+Time for 1,000,000 iters on sets of around 50,000 keys is around 0.27 seconds
+Time for 10,000,000 iters on sets of around 500,000 keys is around 3.4 seconds
+
+This appears to be scaling liniarly with number of iterations, which means that each key access is probably constant time.
+
+Cycles per op = (3s * 3ghertz) / 10,000,000iters = 900 cycles/iter which reasonable to assume for constant time, even if it is kind of slow.
+
+## Design
 
 ### Testing
 
@@ -21,6 +31,10 @@ Disclaimer: I have never really learned how to test, and I sort of ran out of ti
 The final test, cache_speed_test is by far the most thorough and useful, despite not checking if the gotten values are the correct ones, because it sets, deletes, and gets keys in a random way, which means that every combination of set, delete and get is tested, including multiple sets and deletes of the same key. This exposed all sorts of errors.
 
 It also was a great way to check for memory leaks, as even minor memory leaks are fairly serious when running something millions of times.
+
+### Hash table
+
+
 
 ### Eviction policy interface
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <inttypes.h>
 #include "cache.h"
 #include "helper.h"
@@ -38,8 +39,15 @@ int main(int argc,char ** argv){
         lru_test(test_sizes[t]);
     }
     for(size_t t = 0; t < num_tests-1; t++){
+        clock_t start = clock();
         cache_speed_test(test_sizes[t],test_sizes[t+1],NULL);
-        cache_speed_test(test_sizes[t],test_sizes[t+1],custom_hash);
+        double time = (double)(clock() - start) / CLOCKS_PER_SEC;;
+        printf("default hash %f \n",time);
+        start = clock();
+        cache_speed_test(test_sizes[t],test_sizes[t+1],custom_hash);//tests non-default hash function
+        time = (double)(clock() - start) / CLOCKS_PER_SEC;
+        printf("custom hash %f \n",time);
+        fflush(stdout); 
     }
     
     delete_vals();
@@ -54,8 +62,9 @@ uint64_t custom_hash(key_type key){
     for(size_t i = 0; i < tot_size / out_size;i++){
         out += ((uint64_t *)(key))[i];
     }
-    for(size_t i = 0;i < tot_size % out_size; i++){
-        out += ((uint64_t)(key[i + tot_size/out_size])) << i;
+    for(size_t i = 0;i < tot_size%out_size; i++){
+        size_t index = i + tot_size - tot_size%out_size;
+        out += ((uint64_t)(key[index])) << (i*BITS_IN_BYTE);
     }
     return out;
 }
