@@ -10,9 +10,9 @@
 
 #define num_vals (11ULL)
 
-key_t insert_random(cache_t cache,uint32_t size);
-key_t keys[] = {"one","two","three","argvar","52","ten thousand","asdasd","asdasdasdasdasd,","!@#!@$!$~`","1","a verryy longgggg stringggggggggg...................................................................................................................................................!"};
-val_t vals[num_vals];
+key_type insert_random(cache_t cache,uint32_t size);
+key_type keys[] = {"one","two","three","argvar","52","ten thousand","asdasd","asdasdasdasdasd,","!@#!@$!$~`","1","a verryy longgggg stringggggggggg...................................................................................................................................................!"};
+val_type vals[num_vals];
 size_t val_sizes[] = {0,1,2,26,233,1020,15221,41231,300212,1312312,6362363};
 void generate_vals();
 void delete_vals();
@@ -20,7 +20,7 @@ void test_cache_overflow(uint64_t max_mem);
 void test_no_eviction(uint64_t max_mem);
 void lru_test(size_t max_mem);
 void cache_speed_test(size_t num_elmnts, size_t num_iters, hash_func hash_fn);
-uint64_t custom_hash(key_t key);
+uint64_t custom_hash(key_type key);
 
 int main(int argc,char ** argv){
     srand(23);
@@ -40,14 +40,13 @@ int main(int argc,char ** argv){
     for(size_t t = 0; t < num_tests-1; t++){
         cache_speed_test(test_sizes[t],test_sizes[t+1],NULL);
         cache_speed_test(test_sizes[t],test_sizes[t+1],custom_hash);
-        printf("arg\n");
     }
     
     delete_vals();
     getchar();
     return 0;
 }
-uint64_t custom_hash(key_t key){
+uint64_t custom_hash(key_type key){
     //xors the bits of the string together
     size_t tot_size = strlen((char*)(key));
     const size_t out_size = sizeof(uint64_t);
@@ -79,7 +78,7 @@ void test_no_eviction(uint64_t max_mem){
     //makes sure all values are in the cache
     for(size_t i = 0; i < num_before_evict; i++){
         uint32_t val_size = 0;
-        val_t val = cache_get(cache,keys[i],&val_size);
+        val_type val = cache_get(cache,keys[i],&val_size);
         if(val == NULL){
             printf("value added that did not exceed max_mem is not in cache\n");
         }
@@ -105,7 +104,7 @@ void test_no_eviction(uint64_t max_mem){
         if(i == d_i)
             continue;
         uint32_t val_size = 0;
-        val_t val = cache_get(cache,keys[i],&val_size);
+        val_type val = cache_get(cache,keys[i],&val_size);
         if(val == NULL){
             printf("value not deleted is not in cache after another value was deleted\n");
         }
@@ -119,7 +118,7 @@ uint64_t get_mem_in_cache(cache_t cache){
     uint64_t tot_val_size = 0;
     for(size_t i = 0; i < num_vals; i++){
         uint32_t val_size = 0;
-        val_t val = cache_get(cache,keys[i],&val_size);
+        val_type val = cache_get(cache,keys[i],&val_size);
         if(val != NULL){
             tot_val_size += val_size;
         }
@@ -227,7 +226,7 @@ uint64_t long_rand(){
     return Rand() ^ (Rand() << 8) ^ (Rand() << 16) ^ (Rand() << 24) ^ (Rand() << 32);
 }
 
-void init_keys_to_rand_strs(key_t * keyarr,size_t num_keys){
+void init_keys_to_rand_strs(key_type * keyarr,size_t num_keys){
     for(size_t i = 0; i < num_keys; i++){
         uint64_t null_term_8_byte_str = long_rand() & 0x00ffffffffffffff; 
         keyarr[i] = calloc(1,sizeof(uint64_t));
@@ -244,11 +243,11 @@ void cache_speed_test(size_t num_elmnts,size_t num_iters,hash_func hash_fn){
     const uint32_t val_size = sizeof(size_t);
     size_t maxmem = (num_elmnts * val_size) / 2;
     
-    key_t * key_arr = calloc(num_elmnts,sizeof(key_t));
+    key_type * key_arr = calloc(num_elmnts,sizeof(key_type));
     init_keys_to_rand_strs(key_arr,num_elmnts);
     
     uint64_t int_value = 0xcccccccccccccccc;
-    val_t my_val = (val_t)(&int_value);
+    val_type my_val = (val_type)(&int_value);
     
     cache_t cache = create_cache(maxmem,hash_fn);
     

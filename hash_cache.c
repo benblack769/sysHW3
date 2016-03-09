@@ -6,8 +6,8 @@
 #include "replacement.h"
 
 struct key_val_obj{
-    key_t key;
-    val_t val;
+    key_type key;
+    val_type val;
     uint32_t val_size;
     
     p_info_t policy_info;
@@ -21,7 +21,7 @@ struct link_obj{
 };
 void del_link(cache_t cache, link_t * obj);
 
-uint64_t def_hash_fn(key_t key){
+uint64_t def_hash_fn(key_type key){
     //xors the bits of the string together
     size_t tot_size = strlen((char*)(key));
     const size_t out_size = sizeof(uint64_t);
@@ -68,7 +68,7 @@ cache_t create_cache(uint64_t maxmem,hash_func h_fn){
     return n_cache;
 }
 
-link_t * querry_hash(cache_t cache, key_t key){
+link_t * querry_hash(cache_t cache, key_type key){
     size_t hash_loc = hash_location(cache->h_fn(key),cache->table_size);
     link_t * cur_item = &cache->table[hash_loc];
     while(*cur_item != NULL && strcmp((char*)(key),(char*)((*cur_item)->data.key))){
@@ -103,7 +103,7 @@ bool take_care_of_eviction_deletions(cache_t cache,uint32_t val_size){
     bool ret_val = false;
     if(add_res.should_add){
         for(size_t di = 0;di < add_res.size; di++){
-            cache_delete(cache,(key_t)(add_res.data[di]));
+            cache_delete(cache,(key_type)(add_res.data[di]));
         }
         if(add_res.data != NULL){
             free(add_res.data);
@@ -113,7 +113,7 @@ bool take_care_of_eviction_deletions(cache_t cache,uint32_t val_size){
     return ret_val;
 }
 
-void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
+void cache_set(cache_t cache, key_type key, val_type val, uint32_t val_size){
     link_t * init_link = querry_hash(cache,key);
     //if the item is in the list, then delete it
     if(*init_link != NULL){
@@ -124,7 +124,7 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
         return;
     }
     
-    key_t key_copy = make_copy(key,strlen((char*)key)+1);
+    key_type key_copy = make_copy(key,strlen((char*)key)+1);
     key_val_s new_item = {
         key_copy,
         make_copy(val,val_size),
@@ -137,10 +137,9 @@ void cache_set(cache_t cache, key_t key, val_t val, uint32_t val_size){
     
     if(cache->num_elements > cache->table_size){
         resize_table(cache,cache->table_size*2);
-        printf("resize\n");
     }
 }
-val_t cache_get(cache_t cache, key_t key, uint32_t *val_size){
+val_type cache_get(cache_t cache, key_type key, uint32_t *val_size){
     link_t hash_l = *querry_hash(cache,key);
     if(hash_l != NULL){
         info_gotten(cache->evic_policy,hash_l->data.policy_info);
@@ -168,7 +167,7 @@ void del_link(cache_t cache,link_t * obj){
         free(myobj);
     }
 }
-void cache_delete(cache_t cache, key_t key){
+void cache_delete(cache_t cache, key_type key){
     del_link(cache,querry_hash(cache,key));
 }
 uint64_t cache_space_used(cache_t cache){

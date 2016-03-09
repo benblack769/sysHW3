@@ -9,7 +9,7 @@ struct linkstruct{
     struct linkstruct * next;
 };
 typedef struct linkstruct link;
-void add_link(link ** list,key_t key,val_t val,uint32_t val_size){
+void add_link(link ** list,key_type key,val_type val,uint32_t val_size){
     link * oldlink = *list;
     *list = calloc(1,sizeof(link));
     link * curlink = *list;
@@ -29,7 +29,7 @@ void delete_link(link ** list){
     free(curl);
     *list = newl;
 }
-link ** get_linkpp(link ** list,key_t key){
+link ** get_linkpp(link ** list,key_type key){
     while(*list != NULL){
         if (strcmp((char*)(*list)->key,(char*)(key)) == 0)
             return list;

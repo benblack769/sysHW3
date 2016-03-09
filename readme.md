@@ -1,9 +1,18 @@
-File!!!
+File|contents
+--|--
+cache.h | Assigned header file
+replacement.h | Eviction policy API
+hash_cache.c | Final cache implementation
+replacement.h | 
+replacement.h |
+replacement.h |
+replacement.h |
+
 
 ### Success and status
 
-
 Serious memory leaks.
+Kind of bad performance: 10,000,000 sets, deletes and gets on a working set of 500,000 elements takes over a minute. While this is less than quadratic
 
 ### Testing
 
@@ -19,4 +28,10 @@ At first, I considered an interface which was completely abstracted from the cac
 
 This interface has an abstract data that the user inputs (user_id_t), that is associated with the policy information. The idea is that when the policy decides to delete a value, it returns markers that the cache understands, so that it can then delete the values. In my hash table cache, I used pointers to the keys I was storing in my cache.
 
-It was abstract enough that I could directly test it without dealing with any cache at all (using markers of integers, rather than string pointers).
+On the cache side, the cache keeps track of a bit of abstract data that the policy returns, and interacts with the policy using this bit of data. In the LRU, this is a pointer to a link in the bidirectional linked list that forms the LRU.
+
+If I were to make FILO, I would have a simple queue, and p_info_t would be a pointer to the location of the queue of the item.
+
+I were to make Evict Largest, I would have p_info_t be a pointer to the location in the heap I use to keep track of the largest.
+
+It was abstract enough that I could directly test LRU without dealing with any cache at all (using markers of integers, rather than string pointers).
