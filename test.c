@@ -55,7 +55,9 @@ int main(int argc,char ** argv){
     return 0;
 }
 uint64_t custom_hash(key_type key){
-    //xors the bits of the string together
+    //tests if the hash is inputed correctly
+
+    //adds the bits of the string together
     size_t tot_size = strlen((char*)(key));
     const size_t out_size = sizeof(uint64_t);
     uint64_t out = 0;
@@ -70,6 +72,9 @@ uint64_t custom_hash(key_type key){
 }
 
 void test_no_eviction(uint64_t max_mem){
+    //runs tests of sets and deletes assuming that all added
+    //values are still in the cache because the values are all below the maxmem
+
     cache_t cache = create_cache(max_mem,NULL);
     //should not evict things before memory exceeded test
     uint32_t size_sum = 0;
@@ -136,6 +141,8 @@ uint64_t get_mem_in_cache(cache_t cache){
 }
 
 void test_cache_overflow(uint64_t max_mem){
+    //loads cache full of values and sees if the cache never uses more memory than it really should
+
     cache_t cache = create_cache(max_mem,NULL);
 
     for(size_t item_n = 0; item_n < num_vals; item_n++){
@@ -153,6 +160,7 @@ void test_cache_overflow(uint64_t max_mem){
 }
 
 void generate_vals(){
+    //generates random values for the global "vals" array
     for(size_t v = 0; v < num_vals;v++){
         vals[v] = calloc(val_sizes[v],1);
         uint8_t * valbytes = (uint8_t *)(vals[v]);
@@ -162,6 +170,7 @@ void generate_vals(){
     }
 }
 void delete_vals(){
+    //deletes random values from the global "vals" array
     for(size_t v = 0; v < num_vals;v++){
         c_delete(&vals[v]);
     }
@@ -171,7 +180,7 @@ void lru_test(size_t max_mem){
     policy_t policy = create_policy(max_mem);
     const size_t num_elements = max_mem*3;
     size_t * markers = calloc(num_elements,sizeof(size_t));
-    p_info_t * infos = calloc(num_elements,sizeof(p_info_t));
+    pinfo_t * infos = calloc(num_elements,sizeof(pinfo_t));
     //initialize markers
     for(size_t i = 0; i < num_elements; i++){
         markers[i] = i;
@@ -185,7 +194,10 @@ void lru_test(size_t max_mem){
         }
         if(res.size > 0){
             printf("LRU throws out something before max_mem is exceeded\n");
-        }       
+        }
+        if(res.data != NULL){
+            free(res.data);
+        }
         infos[i] = create_info(policy,(user_id_t)(markers[i]),add_size);
     }
     for(size_t i = 0; i < max_mem/2; i++){
@@ -195,7 +207,7 @@ void lru_test(size_t max_mem){
     if(!res.should_add){
         printf("LRU doesn't want to add a reasonable value\n");
     }
-    if(res.size != max_mem/2){
+    else if(res.size != max_mem/2){
         printf("LRU wants delete more or less than the correct number of values from the policy\n");
     }
     //checks to see if all elements are indeed the least recently used (in this case, the elements with markers max_mem/2 to max_mem)
@@ -216,26 +228,35 @@ void lru_test(size_t max_mem){
         }
     }
     const size_t bigmarker = 123123123123ULL;
-    p_info_t biginfo = create_info(policy,(user_id_t)(bigmarker),add_size*max_mem/2);
+    pinfo_t biginfo = create_info(policy,(user_id_t)(bigmarker),add_size*max_mem/2);
     
     //checks if zero is the next thing to be deleted (as it was the last thing access which was not deleted above)
     struct id_arr fin_res = ids_to_delete_if_added(policy,add_size);
     if(fin_res.size != 1 || fin_res.data[0] != 0){
         printf("LRU is not an LRU\n");
     }
-    
+
+    if(fin_res.data != NULL){
+        free(fin_res.data);
+    }
+    if(res.data != NULL){
+        free(res.data);
+    }
     delete_policy(policy);
     free(markers);
     free(infos);
+    free(slots);
 }
 uint64_t Rand(){
     return rand();
 }
 uint64_t long_rand(){
+    //rand that has a greater maximum value (xor retains randomness)
     return Rand() ^ (Rand() << 8) ^ (Rand() << 16) ^ (Rand() << 24) ^ (Rand() << 32);
 }
 
 void init_keys_to_rand_strs(key_type * keyarr,size_t num_keys){
+    //gives each key a string that happens to be createds as a 7 byte integer
     for(size_t i = 0; i < num_keys; i++){
         uint64_t null_term_8_byte_str = long_rand() & 0x00ffffffffffffff; 
         keyarr[i] = calloc(1,sizeof(uint64_t));
@@ -243,6 +264,7 @@ void init_keys_to_rand_strs(key_type * keyarr,size_t num_keys){
     }
 }
 void free_keys(uint8_t ** keyarr,size_t num_keys){
+    //helper for cache_speed_test
     for(size_t i = 0; i < num_keys; i++){
         free(keyarr[i]);
     }

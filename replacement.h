@@ -5,7 +5,7 @@
 struct policy_obj;
 struct pinfo_obj;
 typedef struct policy_obj* policy_t;
-typedef struct pinfo_obj* p_info_t;
+typedef struct pinfo_obj* pinfo_t;
 
 //abstract data that the user (i.e. the cache) uses to understand the output of ids_to_delete_if_added
 //defined to be a void * so that it can really be any data, including a struct, integer, or pointer to any type, the replacement policy does not care
@@ -22,9 +22,9 @@ struct id_arr{
 //adds the info to the policy (if "id" is already in there, then it duplicates the value)
 //the policy owns the pointer, do not free!!! (use delete_info)
 //user owns the id pointer
-p_info_t create_info(policy_t policy,user_id_t id, uint32_t val_size);
+pinfo_t create_info(policy_t policy,user_id_t id, uint32_t val_size);
 //removes info from the policy
-void delete_info(policy_t policy,p_info_t info);
+void delete_info(policy_t policy,pinfo_t info);
 
 //if the should_add value is zero (false), then, the value should not be added to the cache at all (for instance, val_size > max_mem)
 //otherwise, it returns an array of all the cache_ids that need to be deleted for the value to be added
@@ -32,4 +32,4 @@ void delete_info(policy_t policy,p_info_t info);
 struct id_arr ids_to_delete_if_added(policy_t policy, uint32_t val_size);
 
 //gives policy information about the cache.
-void info_gotten(policy_t policy,p_info_t info);
+void info_gotten(policy_t policy,pinfo_t info);
