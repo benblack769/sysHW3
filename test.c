@@ -281,7 +281,7 @@ void cache_speed_test(size_t num_elmnts,size_t num_iters,hash_func hash_fn){
     val_type my_val = (val_type)(&int_value);
     
     cache_t cache = create_cache(maxmem,hash_fn);
-    
+    //randomly sets, gets and deletes items such that items are slowly accumulated
     size_t num_in = 0;
     for(size_t i = 0; i < num_iters; i++){
         size_t ci = i % num_elmnts;
